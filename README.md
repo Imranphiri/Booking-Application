@@ -237,7 +237,7 @@ This project is licensed under the MIT License.
 
 ## 📞 Support
 
-For support, email transithub.mw@gmail.com or open an issue in the repository.
+For support, email imranphiri53@gmail.com or open an issue in the repository.
 
 ---
 
