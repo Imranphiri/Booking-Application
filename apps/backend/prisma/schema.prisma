@@ -1,0 +1,225 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id             String          @id @default(cuid())
+  email          String          @unique
+  name           String
+  password       String
+  role           String          @default("PASSENGER")
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  auditLogs      AuditLog[]
+  bookings       Booking[]
+  securityAlerts SecurityAlert[]
+}
+
+model SystemSettings {
+  id                       String   @id @default(cuid())
+  companyName              String   @default("TransitHub")
+  companyEmail             String   @default("admin@transithub.com")
+  companyPhone             String   @default("+265 999 123 456")
+  companyAddress           String?
+  maintenanceMode          Boolean  @default(false)
+  maintenanceMessage       String   @default("System under maintenance. Please try again later.")
+  allowRegistrations       Boolean  @default(true)
+  requireEmailVerification Boolean  @default(false)
+  defaultCurrency          String   @default("MWK")
+  maxBookingPerUser        Int      @default(5)
+  cancellationPolicy       String   @default("24 hours before departure")
+  termsAndConditions       String
+  privacyPolicy            String
+  aboutUs                  String
+  contactInfo              String
+  socialMediaLinks         String
+  logoUrl                  String?
+  faviconUrl               String?
+  primaryColor             String   @default("#3B82F6")
+  secondaryColor           String   @default("#10B981")
+  createdAt                DateTime @default(now())
+  updatedAt                DateTime @updatedAt
+}
+
+model Bus {
+  id           String   @id @default(cuid())
+  plateNumber  String   @unique
+  capacity     Int
+  model        String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  currentRoute String?
+  driver       String?
+  features     String[] @default([])
+  status       String   @default("Active")
+  type         String   @default("Standard")
+  trips        Trip[]
+}
+
+model Route {
+  id          String   @id @default(cuid())
+  origin      String
+  destination String
+  distance    Float
+  price       Float
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  trips       Trip[]
+}
+
+model Trip {
+  id            String    @id @default(cuid())
+  routeId       String
+  busId         String
+  departureTime DateTime
+  arrivalTime   DateTime
+  status        String    @default("SCHEDULED")
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  bookings      Booking[]
+  bus           Bus       @relation(fields: [busId], references: [id])
+  route         Route     @relation(fields: [routeId], references: [id])
+}
+
+model Booking {
+  id            String   @id @default(cuid())
+  userId        String
+  tripId        String
+  seatNumber    String
+  status        String   @default("PENDING")
+  price         Float
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  passengerName String?
+  paymentMethod String?
+  trip          Trip     @relation(fields: [tripId], references: [id])
+  user          User     @relation(fields: [userId], references: [id])
+  payment       Payment?
+  ticket        Ticket?
+}
+
+model Payment {
+  id              String           @id @default(cuid())
+  bookingId       String           @unique
+  amount          Float
+  method          String
+  status          String           @default("PENDING")
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  failureReason   String?
+  gatewayResponse String?
+  processedAt     DateTime?
+  refundAmount    Float?           @default(0)
+  transactionId   String?          @unique
+  booking         Booking          @relation(fields: [bookingId], references: [id])
+  transactionLogs TransactionLog[]
+}
+
+model Ticket {
+  id               String       @id @default(cuid())
+  bookingId        String       @unique
+  qrCode           String       @unique
+  status           String       @default("ACTIVE")
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+  arrivalTime      DateTime
+  busNumber        String?
+  departureTime    DateTime
+  isValid          Boolean      @default(true)
+  lastScannedAt    DateTime?
+  passengerEmail   String?
+  passengerName    String?
+  price            Float
+  routeDestination String?
+  routeOrigin      String?
+  scanCount        Int          @default(0)
+  scannedAt        DateTime?
+  seatNumber       String
+  validationData   String?
+  booking          Booking      @relation(fields: [bookingId], references: [id])
+  ticketScans      TicketScan[]
+}
+
+model TicketScan {
+  id           String   @id @default(cuid())
+  ticketId     String
+  scannedBy    String?
+  scanLocation String?
+  scanType     String
+  isValid      Boolean
+  latitude     Float?
+  longitude    Float?
+  deviceInfo   String?
+  notes        String?
+  createdAt    DateTime @default(now())
+  ticket       Ticket   @relation(fields: [ticketId], references: [id])
+}
+
+model SeatLock {
+  id         String   @id @default(cuid())
+  tripId     String
+  seatNumber String
+  userId     String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+
+  @@unique([tripId, seatNumber])
+  @@index([expiresAt])
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  userId     String?
+  action     String
+  resource   String
+  resourceId String?
+  details    String?
+  ipAddress  String?
+  userAgent  String?
+  status     String
+  timestamp  DateTime @default(now())
+  user       User?    @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([action])
+  @@index([resource])
+  @@index([status])
+  @@index([timestamp])
+}
+
+model SecurityAlert {
+  id          String    @id @default(cuid())
+  type        String
+  severity    String
+  description String
+  userId      String?
+  ipAddress   String?
+  status      String    @default("ACTIVE")
+  createdAt   DateTime  @default(now())
+  resolvedAt  DateTime?
+  resolvedBy  String?
+  user        User?     @relation(fields: [userId], references: [id])
+
+  @@index([type])
+  @@index([severity])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model TransactionLog {
+  id          String   @id @default(cuid())
+  paymentId   String
+  type        String
+  amount      Float
+  status      String
+  gateway     String
+  gatewayTxId String?  @unique
+  description String?
+  metadata    String?
+  createdAt   DateTime @default(now())
+  payment     Payment  @relation(fields: [paymentId], references: [id])
+}

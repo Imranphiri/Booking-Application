@@ -1,0 +1,264 @@
+/* Footer Component Styles - Booksync Design */
+
+.booksync-footer {
+  background:#0f174a;
+  position: relative;
+  overflow: hidden;
+}
+
+.booksync-footer::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.05'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E") repeat;
+  opacity: 0.1;
+}
+
+.booksync-footer-container {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 1rem;
+}
+
+.booksync-footer-content {
+  position: relative;
+  z-index: 1;
+  padding: 4rem 0 2rem;
+}
+
+/* Footer Grid */
+.booksync-footer-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr 1fr;
+  gap: 3rem;
+  margin-bottom: 3rem;
+}
+
+/* Company Section */
+.booksync-footer-company {
+  max-width: 32rem;
+}
+
+.booksync-footer-logo {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+
+.booksync-footer-logo-icon {
+  width: 3rem;
+  height: 3rem;
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(10px);
+  border-radius: 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.booksync-footer-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: white;
+  margin-bottom: 0.25rem;
+}
+
+.booksync-footer-subtitle {
+  font-size: 0.875rem;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.booksync-footer-description {
+  color: rgba(255, 255, 255, 0.9);
+  line-height: 1.6;
+  margin-bottom: 1.5rem;
+}
+
+.booksync-footer-contact {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+
+.booksync-contact-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 0.875rem;
+}
+
+.booksync-footer-social {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.booksync-social-link {
+  width: 2.5rem;
+  height: 2.5rem;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  transition: all 0.3s;
+}
+
+.booksync-social-link:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+/* Footer Sections */
+.booksync-footer-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.booksync-footer-heading {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: white;
+  margin-bottom: 0.5rem;
+}
+
+.booksync-footer-links {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.booksync-footer-link {
+  color: rgba(255, 255, 255, 0.8);
+  text-decoration: none;
+  font-size: 0.875rem;
+  transition: color 0.2s;
+}
+
+.booksync-footer-link:hover {
+  color: white;
+}
+
+/* Bottom Bar */
+.booksync-footer-bottom {
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  padding-top: 2rem;
+}
+
+.booksync-footer-bottom-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.booksync-footer-location {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 0.875rem;
+}
+
+.booksync-footer-copyright {
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 0.875rem;
+}
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+  .booksync-footer-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+  }
+  
+  .booksync-footer-company {
+    grid-column: span 2;
+  }
+}
+
+@media (max-width: 768px) {
+  .booksync-footer-content {
+    padding: 3rem 0 1.5rem;
+  }
+  
+  .booksync-footer-grid {
+    grid-template-columns: 1fr;
+    gap: 2rem;
+  }
+  
+  .booksync-footer-company {
+    grid-column: span 1;
+  }
+  
+  .booksync-footer-bottom-content {
+    flex-direction: column;
+    text-align: center;
+  }
+}
+
+@media (max-width: 640px) {
+  .booksync-footer-container {
+    padding: 0 0.75rem;
+  }
+  
+  .booksync-footer-content {
+    padding: 2rem 0 1rem;
+  }
+  
+  .booksync-footer-logo {
+    margin-bottom: 1rem;
+  }
+  
+  .booksync-footer-logo-icon {
+    width: 2.5rem;
+    height: 2.5rem;
+  }
+  
+  .booksync-footer-title {
+    font-size: 1.25rem;
+  }
+  
+  .booksync-footer-subtitle {
+    font-size: 0.75rem;
+  }
+  
+  .booksync-footer-description {
+    font-size: 0.875rem;
+  }
+  
+  .booksync-footer-heading {
+    font-size: 1rem;
+  }
+  
+  .booksync-footer-link {
+    font-size: 0.8125rem;
+  }
+  
+  .booksync-social-link {
+    width: 2rem;
+    height: 2rem;
+  }
+  
+  .booksync-contact-item {
+    font-size: 0.8125rem;
+  }
+  
+  .booksync-footer-location,
+  .booksync-footer-copyright {
+    font-size: 0.75rem;
+  }
+}

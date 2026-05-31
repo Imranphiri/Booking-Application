@@ -1,0 +1,374 @@
+import React, { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import {
+  User,
+  Lock,
+  Eye,
+  EyeOff,
+  Mail,
+  Shield,
+  ArrowRight,
+  MapPin,
+  CheckCircle
+} from 'lucide-react';
+import '../styles/Auth.css';
+
+const Signup: React.FC = () => {
+  const navigate = useNavigate();
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    password: '',
+    confirmPassword: '',
+    agreeToTerms: false
+  });
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  const validateForm = () => {
+    const newErrors: Record<string, string> = {};
+
+    if (!formData.name.trim()) {
+      newErrors.name = 'Name is required';
+    }
+
+    if (!formData.email) {
+      newErrors.email = 'Email is required';
+    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
+      newErrors.email = 'Email is invalid';
+    }
+
+    if (!formData.password) {
+      newErrors.password = 'Password is required';
+    } else if (formData.password.length < 6) {
+      newErrors.password = 'Password must be at least 6 characters';
+    }
+
+    if (!formData.confirmPassword) {
+      newErrors.confirmPassword = 'Please confirm your password';
+    } else if (formData.password !== formData.confirmPassword) {
+      newErrors.confirmPassword = 'Passwords do not match';
+    }
+
+    if (!formData.agreeToTerms) {
+      newErrors.agreeToTerms = 'You must agree to the terms and conditions';
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!validateForm()) return;
+
+    setLoading(true);
+    
+    try {
+      const response = await fetch('http://localhost:3000/api/auth/register', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData)
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Registration failed');
+      }
+      
+      const result = await response.json();
+      console.log('Signup successful:', result);
+      
+      // Store auth token and user data
+      localStorage.setItem('token', result.token);
+      localStorage.setItem('user', JSON.stringify(result.user));
+      
+      // Redirect based on user role
+      if (result.user.role === 'ADMIN' || result.user.role === 'OPERATOR') {
+        navigate('/admin');
+      } else {
+        navigate('/dashboard');
+      }
+    } catch (error: any) {
+      setErrors({ general: error.message || 'Registration failed. Please try again.' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value, type, checked } = e.target;
+    setFormData(prev => ({ 
+      ...prev, 
+      [name]: type === 'checkbox' ? checked : value 
+    }));
+    
+    // Clear error when user starts typing
+    if (errors[name]) {
+      setErrors(prev => ({ ...prev, [name]: '' }));
+    }
+  };
+
+  return (
+    <div className="auth-page">
+      {/* Left Side - Brand Info */}
+      <div className="auth-left">
+        <div className="auth-brand">
+          <div className="auth-logo">
+            <div className="auth-logo-icon">
+              <MapPin className="w-8 h-8 text-white" />
+            </div>
+            <div>
+              <div className="auth-logo-title">Booksync</div>
+              <div className="auth-logo-subtitle">Malawi Transport Management</div>
+            </div>
+          </div>
+          
+          <div className="auth-welcome">
+            <h1 className="auth-welcome-title">Join Booksync Today!</h1>
+            <p className="auth-welcome-subtitle">
+              Create your account and start booking bus tickets across Malawi. 
+              Enjoy seamless travel with our modern fleet and reliable service.
+            </p>
+          </div>
+          
+          <div className="auth-features">
+            <div className="auth-feature">
+              <CheckCircle className="w-5 h-5" />
+              <span>Easy Registration</span>
+            </div>
+            <div className="auth-feature">
+              <Shield className="w-5 h-5" />
+              <span>Secure Account</span>
+            </div>
+            <div className="auth-feature">
+              <MapPin className="w-5 h-5" />
+              <span>Instant Booking</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Right Side - Signup Form */}
+      <div className="auth-right">
+        <div className="auth-form-container">
+          <div className="auth-header">
+            <h2 className="auth-title">Create Account</h2>
+            <p className="auth-subtitle">
+              Fill in your details to get started with Booksync
+            </p>
+          </div>
+
+          {/* Signup Form */}
+          <form onSubmit={handleSubmit} className="auth-form">
+            {errors.general && (
+              <div className="auth-error">
+                {errors.general}
+              </div>
+            )}
+
+            {/* Name Field */}
+            <div className="auth-field">
+              <label className="auth-label">Full Name</label>
+              <div className="auth-input-wrapper">
+                <div className="auth-input-icon">
+                  <User className="w-5 h-5" />
+                </div>
+                <input
+                  name="name"
+                  type="text"
+                  placeholder="Enter your full name"
+                  value={formData.name}
+                  onChange={handleInputChange}
+                  className="auth-input"
+                  required
+                />
+              </div>
+              {errors.name && (
+                <div className="auth-field-error">{errors.name}</div>
+              )}
+            </div>
+
+            {/* Email Field */}
+            <div className="auth-field">
+              <label className="auth-label">Email Address</label>
+              <div className="auth-input-wrapper">
+                <div className="auth-input-icon">
+                  <Mail className="w-5 h-5" />
+                </div>
+                <input
+                  name="email"
+                  type="email"
+                  placeholder="Enter your email"
+                  value={formData.email}
+                  onChange={handleInputChange}
+                  className="auth-input"
+                  required
+                />
+              </div>
+              {errors.email && (
+                <div className="auth-field-error">{errors.email}</div>
+              )}
+            </div>
+
+            {/* Password Fields */}
+            <div className="auth-field">
+              <label className="auth-label">Password</label>
+              <div className="auth-input-wrapper">
+                <div className="auth-input-icon">
+                  <Lock className="w-5 h-5" />
+                </div>
+                <input
+                  name="password"
+                  type={showPassword ? 'text' : 'password'}
+                  placeholder="Create a strong password"
+                  value={formData.password}
+                  onChange={handleInputChange}
+                  className="auth-input"
+                  required
+                />
+                <button
+                  type="button"
+                  className="auth-password-toggle"
+                  onClick={() => setShowPassword(!showPassword)}
+                >
+                  {showPassword ? (
+                    <EyeOff className="w-5 h-5" />
+                  ) : (
+                    <Eye className="w-5 h-5" />
+                  )}
+                </button>
+              </div>
+              {errors.password && (
+                <div className="auth-field-error">{errors.password}</div>
+              )}
+              <p className="auth-help-text">
+                Must contain at least 6 characters
+              </p>
+            </div>
+
+            <div className="auth-field">
+              <label className="auth-label">Confirm Password</label>
+              <div className="auth-input-wrapper">
+                <div className="auth-input-icon">
+                  <Lock className="w-5 h-5" />
+                </div>
+                <input
+                  name="confirmPassword"
+                  type={showConfirmPassword ? 'text' : 'password'}
+                  placeholder="Confirm your password"
+                  value={formData.confirmPassword}
+                  onChange={handleInputChange}
+                  className="auth-input"
+                  required
+                />
+                <button
+                  type="button"
+                  className="auth-password-toggle"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                >
+                  {showConfirmPassword ? (
+                    <EyeOff className="w-5 h-5" />
+                  ) : (
+                    <Eye className="w-5 h-5" />
+                  )}
+                </button>
+              </div>
+              {errors.confirmPassword && (
+                <div className="auth-field-error">{errors.confirmPassword}</div>
+              )}
+            </div>
+
+            {/* Terms and Conditions */}
+            <div className="auth-field">
+              <div className="auth-checkbox-group">
+                <input
+                  id="agreeToTerms"
+                  name="agreeToTerms"
+                  type="checkbox"
+                  checked={formData.agreeToTerms}
+                  onChange={handleInputChange}
+                  className="auth-checkbox"
+                />
+                <label htmlFor="agreeToTerms" className="auth-checkbox-label">
+                  I agree to the{' '}
+                  <span className="auth-terms-links">
+                    <a href="#" className="auth-link">
+                      Terms and Conditions
+                    </a>{' '}
+                    and{' '}
+                    <a href="#" className="auth-link">
+                      Privacy Policy
+                    </a>
+                  </span>
+                </label>
+              </div>
+              {errors.agreeToTerms && (
+                <div className="auth-field-error">{errors.agreeToTerms}</div>
+              )}
+            </div>
+
+            <button
+              type="submit"
+              className="auth-submit-button"
+              disabled={loading}
+            >
+              {loading ? (
+                <div className="auth-spinner"></div>
+              ) : (
+                <>
+                  Create Account
+                  <ArrowRight className="w-5 h-5" />
+                </>
+              )}
+            </button>
+          </form>
+
+          {/* Divider */}
+          <div className="auth-divider">
+            <div className="auth-divider-line"></div>
+            <div className="auth-divider-text">
+              <span>Or continue with</span>
+            </div>
+          </div>
+
+          {/* Social Login */}
+          <div className="auth-social-buttons">
+            <button className="auth-social-button">
+              <svg className="auth-social-icon" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+              </svg>
+              Google
+            </button>
+            <button className="auth-social-button">
+              <svg className="auth-social-icon" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
+              </svg>
+              GitHub
+            </button>
+          </div>
+
+          {/* Sign In Link */}
+          <div className="auth-switch-link">
+            <span>
+              Already have an account?{' '}
+              <Link to="/login" className="auth-link">
+                Sign in here
+              </Link>
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default Signup;

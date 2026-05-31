@@ -1,0 +1,251 @@
+import { Request, Response } from 'express';
+import { prisma } from '../lib/prisma';
+
+interface DateRange {
+  startDate: string;
+  endDate: string;
+}
+
+interface AnalyticsFilters {
+  startDate?: string;
+  endDate?: string;
+  routeId?: string;
+  busId?: string;
+  status?: string;
+}
+
+export const getExecutiveDashboard = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const today = new Date();
+    const startOfDay = new Date(today.setHours(0, 0, 0, 0));
+    const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+    const startOfYear = new Date(today.getFullYear(), 0, 1);
+
+    // Total bookings
+    const totalBookings = await prisma.booking.count();
+    
+    // Today's bookings
+    const todayBookings = await prisma.booking.count({
+      where: { createdAt: { gte: startOfDay } }
+    });
+
+    // This month's bookings
+    const monthlyBookings = await prisma.booking.count({
+      where: { createdAt: { gte: startOfMonth } }
+    });
+
+    // Active trips today
+    const activeTrips = await prisma.trip.count({
+      where: {
+        departureTime: {
+          gte: startOfDay,
+          lte: new Date(today.setHours(23, 59, 59, 999))
+        },
+        status: 'SCHEDULED'
+      }
+    });
+
+    // Total revenue
+    const totalRevenue = await prisma.booking.aggregate({
+      _sum: { price: true },
+      where: { status: 'CONFIRMED' }
+    });
+
+    // Today's revenue
+    const todayRevenue = await prisma.booking.aggregate({
+      _sum: { price: true },
+      where: {
+        status: 'CONFIRMED',
+        createdAt: { gte: startOfDay }
+      }
+    });
+
+    // Monthly revenue
+    const monthlyRevenue = await prisma.booking.aggregate({
+      _sum: { price: true },
+      where: {
+        status: 'CONFIRMED',
+        createdAt: { gte: startOfMonth }
+      }
+    });
+
+    // Seat occupancy rate
+    const totalCapacity = await prisma.trip.aggregate({
+      _sum: { bus: { capacity: true } },
+      where: {
+        departureTime: { gte: startOfDay },
+        status: 'SCHEDULED'
+      }
+    });
+
+    const occupiedSeats = await prisma.booking.count({
+      where: {
+        status: { in: ['CONFIRMED', 'PENDING'] },
+        trip: {
+          departureTime: { gte: startOfDay }
+        }
+      }
+    });
+
+    const occupancyRate = totalCapacity._sum.bus?.capacity 
+      ? Math.round((occupiedSeats / totalCapacity._sum.bus.capacity) * 100)
+      : 0;
+
+    res.json({
+      totalBookings,
+      todayBookings,
+      monthlyBookings,
+      activeTrips,
+      totalRevenue: totalRevenue._sum.price || 0,
+      todayRevenue: todayRevenue._sum.price || 0,
+      monthlyRevenue: monthlyRevenue._sum.price || 0,
+      occupancyRate,
+      lastUpdated: new Date()
+    });
+  } catch (error) {
+    console.error('Error fetching executive dashboard:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+export const getRevenueReports = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { startDate, endDate, routeId, busId } = req.query as AnalyticsFilters;
+
+    const dateFilter: any = {};
+    if (startDate && endDate) {
+      dateFilter.createdAt = {
+        gte: new Date(startDate as string),
+        lte: new Date(endDate as string)
+      };
+    }
+
+    const whereClause: any = {
+      status: 'CONFIRMED',
+      ...dateFilter
+    };
+
+    if (routeId) {
+      whereClause.trip = {
+        routeId: routeId as string
+      };
+    }
+
+    if (busId) {
+      whereClause.trip = {
+        ...whereClause.trip,
+        busId: busId as string
+      };
+    }
+
+    // Revenue by route
+    const revenueByRoute = await prisma.booking.groupBy({
+      by: ['trip'],
+      _sum: { price: true },
+      _count: { id: true },
+      where: whereClause,
+      orderBy: { _sum: { price: 'desc' } }
+    });
+
+    // Get route details for revenue data
+    const routeRevenueData = await Promise.all(
+      revenueByRoute.map(async (item: any) => {
+        const trip = await prisma.trip.findUnique({
+          where: { id: item.trip },
+          include: { route: true, bus: true }
+        });
+
+        return {
+          routeId: trip?.route?.id,
+          routeName: `${trip?.route?.origin} → ${trip?.route?.destination}`,
+          busPlateNumber: trip?.bus?.plateNumber,
+          revenue: item._sum.price || 0,
+          bookings: item._count.id || 0,
+          averagePrice: item._count.id > 0 ? (item._sum.price || 0) / (item._count.id || 1) : 0
+        };
+      })
+    );
+
+    // Daily revenue trend
+    const dailyRevenue = await prisma.$queryRaw`
+      SELECT 
+        DATE(created_at) as date,
+        COUNT(*) as bookings,
+        COALESCE(SUM(price), 0) as revenue
+      FROM bookings 
+      WHERE status = 'CONFIRMED'
+        AND created_at >= ${startDate ? new Date(startDate as string) : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)}
+        AND created_at <= ${endDate ? new Date(endDate as string) : new Date()}
+      GROUP BY DATE(created_at)
+      ORDER BY date ASC
+    `;
+
+    // Payment method breakdown
+    const paymentMethods = await prisma.booking.groupBy({
+      by: ['paymentMethod'],
+      _sum: { price: true },
+      _count: { id: true },
+      where: {
+        status: 'CONFIRMED',
+        paymentMethod: { not: null },
+        ...dateFilter
+      }
+    });
+
+    res.json({
+      revenueByRoute: routeRevenueData,
+      dailyRevenue,
+      paymentMethods,
+      totalRevenue: routeRevenueData.reduce((sum, item) => sum + item.revenue, 0),
+      totalBookings: routeRevenueData.reduce((sum, item) => sum + item.bookings, 0)
+    });
+  } catch (error) {
+    console.error('Error fetching revenue reports:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+export const getRoutePerformance = async (req: Request, res: Response): Promise<void> => {
+  try {
+    // const { startDate, endDate } = req.query as AnalyticsFilters;
+    res.json({ message: 'Route performance temporarily disabled for debugging' });
+  } catch (error) {
+    console.error('Error fetching route performance:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+export const getBookingTrends = async (req: Request, res: Response): Promise<void> => {
+  try {
+    // const { period = 'monthly' } = req.query;
+    res.json({ message: 'Booking trends temporarily disabled for debugging' });
+  } catch (error) {
+    console.error('Error fetching booking trends:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+      } catch (error) {
+    console.error('Error fetching route performance:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+export const getBookingTrends = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { period = 'monthly' } = req.query;
+    res.json({ message: 'Booking trends temporarily disabled for debugging' });
+  } catch (error) {
+    console.error('Error fetching booking trends:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+export const exportReports = async (req: Request, res: Response): Promise<void> => {
+  try {
+    res.json({ message: 'Report export functionality' });
+  } catch (error) {
+    console.error('Error exporting reports:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
